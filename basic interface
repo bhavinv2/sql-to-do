@@ -2,32 +2,136 @@
 <html>
 <head>
     <title>Todo List</title>
+    <style>
+        body {
+            background-color: green;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 400px;
+        }
+        h2 {
+            text-align: center;
+        }
+        .todo-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .todo-item:last-child {
+            border-bottom: none;
+        }
+        .edit-input {
+            display: none;
+            width: 70%;
+            margin-right: 10px;
+            border-radius: 20px;
+            border: 1px solid #ddd;
+            padding: 5px;
+        }
+        .task {
+            flex-grow: 1;
+        }
+        input[type="text"] {
+            width: 70%;
+            padding: 10px;
+            margin: 10px 0;
+            box-sizing: border-box;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
 </head>
 <body>
-    <h1>Todo List</h1>
-    <form action="/add_todo" method="post">
-        <input type="text" name="title" placeholder="Title" required>
-        <input type="text" name="description" placeholder="Description" required>
-        <button type="submit">Add Todo</button>
-    </form>
-    <form action="/search" method="get">
-        <input type="text" name="query" placeholder="Search">
-        <button type="submit">Search</button>
-    </form>
-    <ul>
-        {% for todo in todos %}
-        <li>
-            <form action="/update_todo/{{ todo[0] }}" method="post" style="display: inline;">
-                <input type="checkbox" name="completed" {{ 'checked' if todo[3] else '' }} onclick="this.form.submit()">
-                <input type="hidden" name="completed" value="{{ not todo[3] }}">
-            </form>
-            <span>{{ todo[1] }} - {{ todo[2] }}</span>
-            <button onclick="editTodo({{ todo[0] }}, '{{ todo[1] }}', '{{ todo[2] }}')">Edit</button>
-            <form action="/delete_todo/{{ todo[0] }}" method="post" style="display: inline;">
-                <button type="submit">Delete</button>
-            </form>
-        </li>
-        {% endfor %}
-    </ul>
+    <div class="container">
+        <h2>Todo List</h2>
+        <form action="/add_todo" method="post">
+            <input type="text" name="task" placeholder="Enter a new task" required>
+            <button type="submit">Add</button>
+        </form>
+        <ul id="todo-list">
+            {% for todo in todos %}
+                <li class="todo-item" data-id="{{ todo[0] }}">
+                    <span class="task">{{ todo[1] }}</span>
+                    <input type="text" class="edit-input" value="{{ todo[1] }}">
+                    <button class="edit-btn">Edit</button>
+                    <button class="update-btn" style="display:none;">OK</button>
+                    <form action="/delete_todo/{{ todo[0] }}" method="post" style="display:inline;">
+                        <button type="submit">Delete</button>
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
+        <form action="/search" method="get">
+            <input type="text" name="query" placeholder="Search tasks">
+            <button type="submit">Search</button>
+        </form>
+    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            document.querySelectorAll(".edit-btn").forEach(button => {
+                button.addEventListener("click", () => {
+                    const todoItem = button.closest(".todo-item");
+                    const taskSpan = todoItem.querySelector(".task");
+                    const editInput = todoItem.querySelector(".edit-input");
+                    const updateBtn = todoItem.querySelector(".update-btn");
+
+                    taskSpan.style.display = "none";
+                    button.style.display = "none";
+                    editInput.style.display = "inline";
+                    updateBtn.style.display = "inline";
+                });
+            });
+
+            document.querySelectorAll(".update-btn").forEach(button => {
+                button.addEventListener("click", async () => {
+                    const todoItem = button.closest(".todo-item");
+                    const editInput = todoItem.querySelector(".edit-input");
+                    const taskId = todoItem.getAttribute("data-id");
+
+                    const response = await fetch(`/update_todo/${taskId}`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/x-www-form-urlencoded",
+                        },
+                        body: `task=${editInput.value}`,
+                    });
+
+                    if (response.ok) {
+                        todoItem.querySelector(".task").textContent = editInput.value;
+                        editInput.style.display = "none";
+                        button.style.display = "none";
+                        todoItem.querySelector(".task").style.display = "inline";
+                        todoItem.querySelector(".edit-btn").style.display = "inline";
+                    } else {
+                        console.error("Error updating task");
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html>
